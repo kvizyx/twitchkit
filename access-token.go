@@ -1,18 +1,18 @@
 package twitchkit
 
 var (
-	_ ExpirationToken = &AppToken{}
-	_ ExpirationToken = &AccessToken{}
+	_ ExpirationToken = &AppAccessToken{}
+	_ ExpirationToken = &UserAccessToken{}
 )
 
-type AccessToken struct {
+type UserAccessToken struct {
 	AccessToken  string   `json:"access_token"`
 	RefreshToken string   `json:"refresh_token"`
 	Scope        []string `json:"scope"`
 	TokenLifetime
 }
 
-type AppToken struct {
+type AppAccessToken struct {
 	AccessToken string `json:"access_token"`
 	TokenLifetime
 }

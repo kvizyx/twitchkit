@@ -43,7 +43,12 @@ type (
 func (r AdsResource) StartCommercial(ctx context.Context, input StartCommercialInput) (StartCommercialOutput, error) {
 	const resource = "channels/commercial"
 
-	req, err := httpcore.HelixRequestWithJSON(ctx, resource, http.MethodPost, input)
+	req, err := httpcore.NewAPIRequest(ctx, httpcore.RequestOptions{
+		APIScope: api.ScopeHelix,
+		Resource: resource,
+		Method:   http.MethodPost,
+		Body:     input,
+	}, true)
 	if err != nil {
 		return StartCommercialOutput{}, err
 	}

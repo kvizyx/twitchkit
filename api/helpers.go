@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,6 +12,10 @@ const (
 	OAuthBaseURL = "https://id.twitch.tv/oauth2"
 )
 
+var (
+	ErrUnknownScope = errors.New("unknown API scope was provided")
+)
+
 type AuthorizationType string
 
 const (
@@ -18,14 +23,12 @@ const (
 	AuthTypeOAuth  AuthorizationType = "OAuth"
 )
 
-// ResponseMetadata is metadata from Twitch API HTTP response.
-type ResponseMetadata struct {
-	StatusCode    int
-	Header        http.Header
-	TwitchError   string `json:"error"`
-	TwitchStatus  int    `json:"status"`
-	TwitchMessage string `json:"message"`
-}
+type Scope int
+
+const (
+	ScopeHelix Scope = iota
+	ScopeOAuth
+)
 
 func ComposeHelixURL(resource string) string {
 	return strings.Join([]string{HelixBaseURL, resource}, "/")
@@ -35,7 +38,8 @@ func ComposeOAuthURL(resource string) string {
 	return strings.Join([]string{OAuthBaseURL, resource}, "/")
 }
 
-func SetAuthType(req *http.Request, authType AuthorizationType, accessToken string) {
+// SetAuthHeader sets authorization header for the provided HTTP request.
+func SetAuthHeader(req *http.Request, authType AuthorizationType, accessToken string) {
 	if req == nil {
 		return
 	}

@@ -13,14 +13,14 @@ import (
 func main() {
 	authProvider := twitchkit.NewRefreshingAuthProvider(
 		twitchkit.RefreshingAuthProviderParams{
-			ClientID:     "",
-			ClientSecret: "",
-			RedirectURL:  "",
-			Scopes:       nil,
+			ClientID:     "<ClientID>",
+			ClientSecret: "<ClientSecret>",
+			RedirectURL:  "<RedirectURL>",
+			Scopes:       []string{},
 		},
 	)
 
-	authProvider.OnRefresh(func(userID string, token twitchkit.AccessToken) {
+	authProvider.OnRefresh(func(userID string, token twitchkit.UserAccessToken) {
 		fmt.Printf("refresh success for %s: %v\n", userID, token)
 	})
 

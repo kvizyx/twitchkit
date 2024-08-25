@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/kvizyx/twitchkit/api"
@@ -33,23 +32,11 @@ func (c Client) doRequest(req *http.Request, dest any) (api.ResponseMetadata, er
 	}
 
 	switch metadata.StatusCode {
+	case http.StatusUnauthorized:
+		// TODO: try to retry with access token refreshing
 	case http.StatusTooManyRequests:
 		if c.retryConfig.RetryAll {
-			limitResetHeader := metadata.Header.Get("RateLimit-Reset")
-
-			limitResetValue, err := strconv.ParseInt(limitResetHeader, 10, 64)
-			if err != nil {
-				return metadata, fmt.Errorf("parse rate-limit reset header: %w", err)
-			}
-
-			limitTimeout := limitResetValue - time.Now().Unix()
-			if limitTimeout >= int64(c.retryConfig.MaxRateLimitTimeout.Seconds()) {
-				return metadata, ErrRetryTimeout
-			}
-
-			retryAfter := (time.Duration(limitTimeout)) * time.Second
-
-			return c.retryRequest(req, dest, 1, retryAfter, 0)
+			return c.retryRateLimitedRequest(req, metadata, dest)
 		}
 	case http.StatusServiceUnavailable:
 		if c.retryConfig.RetryAll || c.retryConfig.RetryOnUnavailable {
@@ -66,8 +53,23 @@ func (c Client) doRequest(req *http.Request, dest any) (api.ResponseMetadata, er
 	return metadata, err
 }
 
-func (c Client) retryRateLimitRequest() {
+func (c Client) retryRateLimitedRequest(
+	req *http.Request,
+	metadata api.ResponseMetadata,
+	dest any,
+) (api.ResponseMetadata, error) {
+	var (
+		serverLimitTimeout = metadata.RateLimitReset() - time.Now().Unix()
+		maxLimitTimeout    = int64(c.retryConfig.MaxRateLimitTimeout.Seconds())
+	)
 
+	if (serverLimitTimeout >= maxLimitTimeout) && maxLimitTimeout != 0 {
+		return metadata, ErrRetryTimeout
+	}
+
+	retryAfter := (time.Duration(serverLimitTimeout)) * time.Second
+
+	return c.retryRequest(req, dest, 1, retryAfter, 0)
 }
 
 func (c Client) retryRequest(
@@ -92,13 +94,13 @@ func (c Client) retryRequest(
 	)
 
 	for range times {
-		if waitInterval != nil {
-			<-waitInterval.C
-		}
-
 		metadata, err = httpcore.DoAPIRequest(req, dest, c.httpClient)
 		if err == nil {
 			return metadata, nil
+		}
+
+		if waitInterval != nil {
+			<-waitInterval.C
 		}
 	}
 

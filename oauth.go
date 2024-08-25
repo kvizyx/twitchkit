@@ -9,13 +9,13 @@ import (
 	httpcore "github.com/kvizyx/twitchkit/http-core"
 )
 
-type AppTokenResponse struct {
-	AppToken
+type AppAccessTokenResponse struct {
+	AppAccessToken
 	ResponseMetadata api.ResponseMetadata
 }
 
-type AccessTokenResponse struct {
-	AccessToken
+type UserAccessTokenResponse struct {
+	UserAccessToken
 	ResponseMetadata api.ResponseMetadata
 }
 
@@ -39,7 +39,7 @@ func ExchangeCode(
 	ctx context.Context,
 	params ExchangeCodeParams,
 	httpClient ...httpcore.HTTPClient,
-) (AccessTokenResponse, error) {
+) (UserAccessTokenResponse, error) {
 	const resource = "token"
 
 	values := url.Values{}
@@ -49,12 +49,17 @@ func ExchangeCode(
 	values.Set("grant_type", "authorization_code")
 	values.Set("redirect_url", params.RedirectURL)
 
-	req, err := httpcore.OAuthRequestWithURLValues(ctx, resource, http.MethodPost, values, true)
+	req, err := httpcore.NewAPIRequest(ctx, httpcore.RequestOptions{
+		APIScope: api.ScopeOAuth,
+		Resource: resource,
+		Method:   http.MethodPost,
+		Body:     values,
+	}, false)
 	if err != nil {
-		return AccessTokenResponse{}, err
+		return UserAccessTokenResponse{}, err
 	}
 
-	var accessToken AccessTokenResponse
+	var accessToken UserAccessTokenResponse
 
 	metadata, err := httpcore.DoAPIRequest(req, &accessToken, httpClient...)
 	accessToken.ResponseMetadata = metadata
@@ -72,7 +77,7 @@ func FetchAppAccessToken(
 	ctx context.Context,
 	credentials ClientCredentials,
 	httpClient ...httpcore.HTTPClient,
-) (AppTokenResponse, error) {
+) (AppAccessTokenResponse, error) {
 	const resource = "token"
 
 	values := url.Values{}
@@ -80,12 +85,17 @@ func FetchAppAccessToken(
 	values.Set("client_secret", credentials.ClientSecret)
 	values.Set("grant_type", "client_credentials")
 
-	req, err := httpcore.OAuthRequestWithURLValues(ctx, resource, http.MethodPost, values, true)
+	req, err := httpcore.NewAPIRequest(ctx, httpcore.RequestOptions{
+		APIScope: api.ScopeOAuth,
+		Resource: resource,
+		Method:   http.MethodPost,
+		Body:     values,
+	}, false)
 	if err != nil {
-		return AppTokenResponse{}, err
+		return AppAccessTokenResponse{}, err
 	}
 
-	var appToken AppTokenResponse
+	var appToken AppAccessTokenResponse
 
 	metadata, err := httpcore.DoAPIRequest(req, &appToken, httpClient...)
 	appToken.ResponseMetadata = metadata
@@ -104,7 +114,7 @@ func RefreshToken(
 	credentials ClientCredentials,
 	refreshToken string,
 	httpClient ...httpcore.HTTPClient,
-) (AccessTokenResponse, error) {
+) (UserAccessTokenResponse, error) {
 	const resource = "token"
 
 	values := url.Values{}
@@ -113,12 +123,17 @@ func RefreshToken(
 	values.Set("grant_type", "refresh_token")
 	values.Set("refresh_token", refreshToken)
 
-	req, err := httpcore.OAuthRequestWithURLValues(ctx, resource, http.MethodPost, values, true)
+	req, err := httpcore.NewAPIRequest(ctx, httpcore.RequestOptions{
+		APIScope: api.ScopeOAuth,
+		Resource: resource,
+		Method:   http.MethodPost,
+		Body:     values,
+	}, false)
 	if err != nil {
-		return AccessTokenResponse{}, err
+		return UserAccessTokenResponse{}, err
 	}
 
-	var accessToken AccessTokenResponse
+	var accessToken UserAccessTokenResponse
 
 	metadata, err := httpcore.DoAPIRequest(req, &accessToken, httpClient...)
 	accessToken.ResponseMetadata = metadata
@@ -143,7 +158,12 @@ func RevokeToken(
 	values.Set("client_id", clientID)
 	values.Set("token", accessToken)
 
-	req, err := httpcore.OAuthRequestWithURLValues(ctx, resource, http.MethodPost, values, true)
+	req, err := httpcore.NewAPIRequest(ctx, httpcore.RequestOptions{
+		APIScope: api.ScopeOAuth,
+		Resource: resource,
+		Method:   http.MethodPost,
+		Body:     values,
+	}, false)
 	if err != nil {
 		return api.ResponseMetadata{}, err
 	}
@@ -157,20 +177,24 @@ func ValidateToken(
 	ctx context.Context,
 	accessToken string,
 	httpClient ...httpcore.HTTPClient,
-) (ValidateTokenResponse, error) {
+) (bool, ValidateTokenResponse, error) {
 	const resource = "validate"
 
-	req, err := httpcore.OAuthRequestEmpty(ctx, resource, http.MethodGet)
+	req, err := httpcore.NewAPIRequest(ctx, httpcore.RequestOptions{
+		APIScope: api.ScopeOAuth,
+		Resource: resource,
+		Method:   http.MethodGet,
+	}, false)
 	if err != nil {
-		return ValidateTokenResponse{}, err
+		return false, ValidateTokenResponse{}, err
 	}
 
-	api.SetAuthType(req, api.AuthTypeOAuth, accessToken)
+	api.SetAuthHeader(req, api.AuthTypeOAuth, accessToken)
 
-	var validateToken ValidateTokenResponse
+	var vt ValidateTokenResponse
 
-	metadata, err := httpcore.DoAPIRequest(req, &validateToken, httpClient...)
-	validateToken.ResponseMetadata = metadata
+	metadata, err := httpcore.DoAPIRequest(req, &vt, httpClient...)
+	vt.ResponseMetadata = metadata
 
-	return validateToken, err
+	return vt.ResponseMetadata.StatusCode == http.StatusOK, vt, err
 }

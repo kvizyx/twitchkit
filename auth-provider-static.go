@@ -4,6 +4,7 @@ package twitchkit
 type StaticAuthProvider struct {
 	clientID    string
 	accessToken string
+	scopes      []string
 }
 
 var _ AuthProvider = &StaticAuthProvider{}

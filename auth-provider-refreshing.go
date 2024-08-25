@@ -2,7 +2,7 @@ package twitchkit
 
 type (
 	// OnRefreshCallback ...
-	OnRefreshCallback func(userID string, token AccessToken)
+	OnRefreshCallback func(userID string, token UserAccessToken)
 
 	// OnRefreshFailureCallback ...
 	OnRefreshFailureCallback func(userID string, err error)

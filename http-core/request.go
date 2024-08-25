@@ -19,41 +19,69 @@ const (
 )
 
 var (
+	ErrUnknownBody          = errors.New("unknown body type")
 	ErrEmptyRequest         = errors.New("request data is empty")
 	ErrNoContentDestination = errors.New("no content was returned by server but destination is not empty")
 )
 
-// HelixRequestWithURLValues ...
-func HelixRequestWithURLValues(
-	ctx context.Context,
-	resource, method string,
-	values url.Values,
-	withBody bool,
-) (*http.Request, error) {
-	return requestWithURLValues(ctx, api.ComposeHelixURL(resource), method, values, withBody)
+type RequestOptions struct {
+	APIScope  api.Scope
+	Resource  string
+	Method    string
+	URLValues url.Values
+	Body      any
 }
 
-// HelixRequestWithJSON ...
-func HelixRequestWithJSON(ctx context.Context, resource, method string, data any) (*http.Request, error) {
-	return requestWithJSON(ctx, api.ComposeHelixURL(resource), method, data)
+func NewAPIRequest(ctx context.Context, opts RequestOptions, jsonBody bool) (*http.Request, error) {
+	var endpointURL string
+
+	switch opts.APIScope {
+	case api.ScopeHelix:
+		endpointURL = api.ComposeHelixURL(opts.Resource)
+	case api.ScopeOAuth:
+		endpointURL = api.ComposeOAuthURL(opts.Resource)
+	default:
+		return nil, api.ErrUnknownScope
+	}
+
+	if opts.URLValues != nil {
+		endpointURL = fmt.Sprintf("%s?%s", endpointURL, opts.URLValues.Encode())
+	}
+
+	var body io.Reader
+
+	req, err := http.NewRequestWithContext(ctx, opts.Method, endpointURL, body)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	if opts.Body == nil {
+		return req, nil
+	}
+
+	if jsonBody {
+		jsonBytes, err := json.Marshal(opts.Body)
+		if err != nil {
+			return nil, fmt.Errorf("marshal request: %w", err)
+		}
+
+		body = bytes.NewBuffer(jsonBytes)
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		urlValues, ok := opts.Body.(url.Values)
+		if !ok {
+			return nil, ErrUnknownBody
+		}
+
+		body = bytes.NewBuffer([]byte(urlValues.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+
+	req.Body = io.NopCloser(body)
+
+	return req, nil
 }
 
-// OAuthRequestWithURLValues ...
-func OAuthRequestWithURLValues(
-	ctx context.Context,
-	resource, method string,
-	values url.Values,
-	withBody bool,
-) (*http.Request, error) {
-	return requestWithURLValues(ctx, api.ComposeOAuthURL(resource), method, values, withBody)
-}
-
-// OAuthRequestEmpty ...
-func OAuthRequestEmpty(ctx context.Context, resource, method string) (*http.Request, error) {
-	return requestEmpty(ctx, api.ComposeOAuthURL(resource), method)
-}
-
-// DoAPIRequest ...
 func DoAPIRequest(req *http.Request, dest any, httpClient ...HTTPClient) (api.ResponseMetadata, error) {
 	client := GetOrDefaultHTTPClient(httpClient...)
 
@@ -102,60 +130,4 @@ func DoAPIRequest(req *http.Request, dest any, httpClient ...HTTPClient) (api.Re
 	}
 
 	return metadata, nil
-}
-
-func requestEmpty(ctx context.Context, endpoint, method string) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, endpoint, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create request with context: %w", err)
-	}
-
-	return req, nil
-}
-
-func requestWithURLValues(
-	ctx context.Context,
-	endpoint, method string,
-	values url.Values,
-	withBody bool,
-) (*http.Request, error) {
-	if !withBody {
-		endpoint = fmt.Sprintf("%s?%s", endpoint, values.Encode())
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, endpoint, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create request with context: %w", err)
-	}
-
-	if withBody {
-		req.Body = io.NopCloser(bytes.NewReader([]byte(values.Encode())))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	}
-
-	return req, nil
-}
-
-func requestWithJSON(ctx context.Context, endpoint, method string, data any) (*http.Request, error) {
-	if data == nil {
-		return nil, ErrEmptyRequest
-	}
-
-	body, err := json.Marshal(data)
-	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, endpoint, bytes.NewBuffer(body))
-	if err != nil {
-		return nil, fmt.Errorf("create request with context: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	if len(body) > 0 {
-		req.Body = io.NopCloser(bytes.NewReader(body))
-	}
-
-	return req, nil
 }
