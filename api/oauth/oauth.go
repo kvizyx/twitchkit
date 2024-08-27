@@ -24,7 +24,7 @@ type UserAccessTokenResponse struct {
 type ExchangeCodeParams struct {
 	ClientCredentials
 	Code        string
-	RedirectURL string
+	RedirectURI string
 }
 
 func ExchangeCode(
@@ -39,7 +39,7 @@ func ExchangeCode(
 	values.Set("client_secret", params.ClientSecret)
 	values.Set("code", params.Code)
 	values.Set("grant_type", "authorization_code")
-	values.Set("redirect_url", params.RedirectURL)
+	values.Set("redirect_uri", params.RedirectURI)
 
 	req, err := httpcore.NewAPIRequest(ctx, httpcore.RequestOptions{
 		APIType:  api.TypeOAuth,

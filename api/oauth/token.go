@@ -33,7 +33,7 @@ func (tl *TokenLifetime) ObtainedAt() *ObtainTime {
 // IsTokenExpired returns whether token is expired or not with 30 seconds
 // spare for safer refresh handling.
 func IsTokenExpired(token ExpirationToken) bool {
-	return (token.ObtainedAt().Int64() + token.ExpiresIn() + 30) >= time.Now().Unix()
+	return time.Now().Unix() >= (token.ObtainedAt().Int64() + token.ExpiresIn() + 30)
 }
 
 // Int64 returns ObtainTime as int64 type.

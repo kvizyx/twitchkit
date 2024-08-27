@@ -23,7 +23,7 @@ type (
 type RefreshingProvider struct {
 	clientID     string
 	clientSecret string
-	redirectURL  string
+	redirectURI  string
 	scopes       []string
 
 	appAccessToken oauth.AppAccessToken
@@ -44,7 +44,7 @@ var (
 type RefreshingProviderParams struct {
 	ClientID     string
 	ClientSecret string
-	RedirectURL  string
+	RedirectURI  string
 	Scopes       []string
 }
 
@@ -52,8 +52,9 @@ func NewRefreshingProvider(p RefreshingProviderParams) *RefreshingProvider {
 	return &RefreshingProvider{
 		clientID:     p.ClientID,
 		clientSecret: p.ClientSecret,
-		redirectURL:  p.RedirectURL,
+		redirectURI:  p.RedirectURI,
 		scopes:       p.Scopes,
+		users:        make(map[string]oauth.UserAccessToken),
 	}
 }
 
@@ -148,17 +149,19 @@ func (ap *RefreshingProvider) AnyAccessToken(ctx context.Context, userID string)
 
 // AddUserForToken ...
 func (ap *RefreshingProvider) AddUserForToken(ctx context.Context, accessToken oauth.AccessToken) (string, error) {
-	var tokenWithInfo oauth.AccessTokenWithInfo
+	tokenWithInfo := oauth.AccessTokenWithInfo{
+		AnyAccessToken: accessToken,
+	}
 
 	if len(accessToken.AccessToken()) != 0 && !oauth.IsTokenExpired(accessToken) {
 		_, res, err := oauth.ValidateToken(ctx, accessToken.AccessToken())
-		tokenWithInfo.TokenInfo = res.TokenInfo //nolint:all
-
 		if err != nil {
 			if res.ResponseMetadata.StatusCode != http.StatusUnauthorized {
 				return "", fmt.Errorf("validate token: %w", err)
 			}
 		}
+
+		tokenWithInfo.TokenInfo = res.TokenInfo
 	}
 
 	if len(tokenWithInfo.TokenInfo.ClientID) == 0 {
@@ -196,7 +199,7 @@ func (ap *RefreshingProvider) AddUserForToken(ctx context.Context, accessToken o
 
 // AddUserForCode ...
 func (ap *RefreshingProvider) AddUserForCode(ctx context.Context, code string) (string, error) {
-	if len(ap.redirectURL) == 0 {
+	if len(ap.redirectURI) == 0 {
 		return "", oauth.ErrEmptyRedirectURI
 	}
 
@@ -206,7 +209,7 @@ func (ap *RefreshingProvider) AddUserForCode(ctx context.Context, code string) (
 			ClientSecret: ap.clientSecret,
 		},
 		Code:        code,
-		RedirectURL: ap.redirectURL,
+		RedirectURI: ap.redirectURI,
 	})
 	if err != nil {
 		return "", fmt.Errorf("exchange code: %w", err)
@@ -374,14 +377,18 @@ func (ap *RefreshingProvider) withRefreshCallbacks(
 		}
 
 		if len(userID) == 0 {
-			if tokenInfo, ok := token.(oauth.AccessTokenWithInfo); ok {
+			tokenInfo, ok := token.(oauth.AccessTokenWithInfo)
+			if !ok {
+				return err
+			}
+
+			if len(tokenInfo.TokenInfo.UserID) != 0 {
 				go ap.cbOnRefreshFailure(tokenInfo.TokenInfo.UserID, err)
 			}
 			return err
 		}
 
 		go ap.cbOnRefreshFailure(userID, err)
-
 		return err
 	}
 

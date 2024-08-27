@@ -20,17 +20,17 @@ func (at AccessTokenWithInfo) AccessToken() string {
 }
 
 func (at AccessTokenWithInfo) RefreshToken() string {
-	return at.RefreshToken()
+	return at.AnyAccessToken.RefreshToken()
 }
 
 func (at AccessTokenWithInfo) Scope() []string {
-	return at.Scope()
+	return at.AnyAccessToken.Scope()
 }
 
 func (at AccessTokenWithInfo) ExpiresIn() int64 {
-	return at.ExpiresIn()
+	return at.AnyAccessToken.ExpiresIn()
 }
 
 func (at AccessTokenWithInfo) ObtainedAt() *ObtainTime {
-	return at.ObtainedAt()
+	return at.AnyAccessToken.ObtainedAt()
 }
