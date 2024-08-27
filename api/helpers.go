@@ -13,32 +13,37 @@ const (
 )
 
 var (
-	ErrUnknownScope = errors.New("unknown API scope was provided")
+	ErrUnknownType = errors.New("unknown Twitch API type")
 )
 
-type AuthorizationType string
+// Type ...
+type Type int
 
 const (
-	AuthTypeBearer AuthorizationType = "Bearer"
-	AuthTypeOAuth  AuthorizationType = "OAuth"
+	TypeHelix Type = iota
+	TypeOAuth
 )
 
-type Scope int
-
-const (
-	ScopeHelix Scope = iota
-	ScopeOAuth
-)
-
+// ComposeHelixURL ...
 func ComposeHelixURL(resource string) string {
 	return strings.Join([]string{HelixBaseURL, resource}, "/")
 }
 
+// ComposeOAuthURL ...
 func ComposeOAuthURL(resource string) string {
 	return strings.Join([]string{OAuthBaseURL, resource}, "/")
 }
 
-// SetAuthHeader sets authorization header for the provided HTTP request.
+// SetClientHeader sets app client ID header for the provider HTTP request.
+func SetClientHeader(req *http.Request, clientID string) {
+	if req == nil {
+		return
+	}
+
+	req.Header.Set("Client-ID", clientID)
+}
+
+// SetAuthHeader sets Twitch API authorization header for the provided HTTP request.
 func SetAuthHeader(req *http.Request, authType AuthorizationType, accessToken string) {
 	if req == nil {
 		return

@@ -9,6 +9,6 @@ var (
 	ErrUnsuccessfulRequest = errors.New("unsuccessful request")
 )
 
-func UnsuccessfulRequest(status string) error {
+func UnsuccessfulRequestError(status string) error {
 	return fmt.Errorf("%w: %s", ErrUnsuccessfulRequest, status)
 }

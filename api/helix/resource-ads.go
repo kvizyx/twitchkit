@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/kvizyx/twitchkit/api"
-	httpcore "github.com/kvizyx/twitchkit/http-core"
+	"github.com/kvizyx/twitchkit/http-core"
 )
 
 type AdsResource struct {
@@ -27,10 +27,9 @@ type (
 	}
 
 	StartCommercialOutput struct {
-		Length     int    `json:"length"`
-		Message    string `json:"message"`
-		RetryAfter int    `json:"retry_after"`
-
+		Length           int    `json:"length"`
+		Message          string `json:"message"`
+		RetryAfter       int    `json:"retry_after"`
 		ResponseMetadata api.ResponseMetadata
 	}
 )
@@ -44,7 +43,7 @@ func (r AdsResource) StartCommercial(ctx context.Context, input StartCommercialI
 	const resource = "channels/commercial"
 
 	req, err := httpcore.NewAPIRequest(ctx, httpcore.RequestOptions{
-		APIScope: api.ScopeHelix,
+		APIType:  api.TypeHelix,
 		Resource: resource,
 		Method:   http.MethodPost,
 		Body:     input,
@@ -58,7 +57,10 @@ func (r AdsResource) StartCommercial(ctx context.Context, input StartCommercialI
 		output  StartCommercialOutput
 	)
 
-	metadata, err := r.client.doRequest(req, &wrapper)
+	metadata, err := r.client.doRequest(req, &wrapper, RequestAuthParams{
+		UserID: input.BroadcasterID,
+		Scopes: []string{"channel:edit:commercial"},
+	})
 	output.ResponseMetadata = metadata
 
 	if err != nil {

@@ -5,6 +5,15 @@ import (
 	"strconv"
 )
 
+// AuthorizationType ...
+type AuthorizationType string
+
+const (
+	AuthTypeBearer    AuthorizationType = "Bearer"
+	AuthTypeOAuth     AuthorizationType = "OAuth"
+	AuthTypeExtension AuthorizationType = "Extension"
+)
+
 // ResponseMetadata is metadata from Twitch API HTTP response.
 type ResponseMetadata struct {
 	StatusCode    int

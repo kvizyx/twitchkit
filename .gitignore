@@ -1,8 +1,12 @@
+# System
 .DS_Store
 
-.idea
-.vscode
+# Editor
+*.code-workspace
+/.idea
+/.vscode
 
+# Tests
 debug.test
 tests.test
 coverage.out

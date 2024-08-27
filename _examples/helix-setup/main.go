@@ -4,23 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
-	"github.com/kvizyx/twitchkit"
 	"github.com/kvizyx/twitchkit/api/helix"
+	"github.com/kvizyx/twitchkit/api/oauth"
+	"github.com/kvizyx/twitchkit/auth-provider"
 )
 
 func main() {
-	authProvider := twitchkit.NewRefreshingAuthProvider(
-		twitchkit.RefreshingAuthProviderParams{
-			ClientID:     "<ClientID>",
-			ClientSecret: "<ClientSecret>",
-			RedirectURL:  "<RedirectURL>",
+	authProvider := authprovider.NewRefreshingProvider(
+		authprovider.RefreshingProviderParams{
+			ClientID:     "",
+			ClientSecret: "",
+			RedirectURL:  "",
 			Scopes:       []string{},
 		},
 	)
 
-	authProvider.OnRefresh(func(userID string, token twitchkit.UserAccessToken) {
+	authProvider.OnRefresh(func(userID string, token oauth.UserAccessToken) {
 		fmt.Printf("refresh success for %s: %v\n", userID, token)
 	})
 
@@ -30,19 +30,18 @@ func main() {
 
 	client, err := helix.NewClient(helix.ClientConfig{
 		AuthProvider: authProvider,
-		RetryConfig: helix.RetryConfig{
-			RetryAll:                   false,
-			RetryOnUnavailable:         true,
-			RetryOnUnavailableTimes:    3,
-			RetryOnUnavailableInterval: 1 * time.Second,
-		},
+		RetryConfig:  helix.DefaultRetryConfig,
 	})
 	if err != nil {
 		log.Fatalf("failed to create helix client: %s", err)
 	}
 
-	output, err := client.WithRetry().Ads().StartCommercial(
-		context.TODO(),
+	client.AsUser("", func(client helix.Client) {
+		// TODO: do something
+	})
+
+	output, err := client.Ads().StartCommercial(
+		context.Background(),
 		helix.StartCommercialInput{
 			BroadcasterID: "",
 			Length:        0,

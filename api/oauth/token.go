@@ -1,4 +1,4 @@
-package twitchkit
+package oauth
 
 import (
 	"time"
@@ -11,11 +11,6 @@ type ObtainTime int64
 type ExpirationToken interface {
 	ExpiresIn() int64
 	ObtainedAt() *ObtainTime
-}
-
-type ClientCredentials struct {
-	ClientID     string
-	ClientSecret string
 }
 
 type TokenLifetime struct {

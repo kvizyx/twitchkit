@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kvizyx/twitchkit"
+	"github.com/kvizyx/twitchkit/api/oauth"
 )
 
 func main() {
-	res, err := twitchkit.FetchAppAccessToken(
+	res, err := oauth.FetchAppAccessToken(
 		context.TODO(),
-		twitchkit.ClientCredentials{
+		oauth.ClientCredentials{
 			ClientID:     "<ClientID>",
 			ClientSecret: "<ClientSecret>",
 		},
@@ -21,10 +21,10 @@ func main() {
 
 	fmt.Printf("App token: %v\n", res.AppAccessToken)
 
-	isValid, validation, err := twitchkit.ValidateToken(context.TODO(), res.AccessToken)
+	isValid, tokenInfo, err := oauth.ValidateToken(context.TODO(), res.AccessTokenValue)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Validate result (%t): %v\n", isValid, validation)
+	fmt.Printf("Validate result (%t): %v\n", isValid, tokenInfo)
 }
