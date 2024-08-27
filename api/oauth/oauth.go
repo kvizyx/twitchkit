@@ -119,10 +119,13 @@ func AuthorizationURL(params AuthorizationURLParams) string {
 	values.Set("client_id", params.ClientID)
 	values.Set("redirect_uri", params.RedirectURI)
 	values.Set("response_type", params.ResponseType)
-	values.Set("scope", strings.Join(params.Scopes, "%20"))
 
 	if params.ForceVerify {
 		values.Set("force_verify", "true")
+	}
+
+	if len(params.Scopes) != 0 {
+		values.Set("scope", strings.Join(params.Scopes, " "))
 	}
 
 	if len(params.State) != 0 {
